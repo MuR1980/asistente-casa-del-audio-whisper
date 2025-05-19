@@ -2,12 +2,12 @@
 import os
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import openai
+from openai import OpenAI
 
 app = Flask(__name__)
 CORS(app)
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @app.route("/")
 def index():
@@ -16,20 +16,23 @@ def index():
 @app.route("/transcribe", methods=["POST"])
 def transcribe():
     audio = request.files["audio"]
-    transcript = openai.Audio.transcribe("whisper-1", audio)
-    return jsonify({ "transcript": transcript["text"] })
+    transcript = client.audio.transcriptions.create(
+        model="whisper-1",
+        file=audio
+    )
+    return jsonify({ "transcript": transcript.text })
 
 @app.route("/chat", methods=["POST"])
 def chat():
     user_message = request.json.get("message", "")
-    completion = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             { "role": "system", "content": "Sos un asistente de ventas de Casa del Audio." },
             { "role": "user", "content": user_message }
         ]
     )
-    reply = completion.choices[0].message["content"]
+    reply = response.choices[0].message.content
     return jsonify({ "reply": reply })
 
 if __name__ == "__main__":
