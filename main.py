@@ -16,9 +16,10 @@ def index():
 @app.route("/transcribe", methods=["POST"])
 def transcribe():
     audio_file = request.files["audio"]
+    # ✅ ahora pasamos filename, stream y mimetype como tuple
     transcript = client.audio.transcriptions.create(
         model="whisper-1",
-        file=audio_file.stream  # ✅ solución correcta
+        file=(audio_file.filename, audio_file.stream, audio_file.mimetype)
     )
     return jsonify({ "transcript": transcript.text })
 
