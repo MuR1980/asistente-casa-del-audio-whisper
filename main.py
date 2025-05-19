@@ -15,10 +15,10 @@ def index():
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe():
-    audio = request.files["audio"]
+    audio_file = request.files["audio"]
     transcript = client.audio.transcriptions.create(
         model="whisper-1",
-        file=audio
+        file=audio_file.stream  # ✅ solución correcta
     )
     return jsonify({ "transcript": transcript.text })
 
