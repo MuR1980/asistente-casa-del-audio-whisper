@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Asistente Casa del Audio - Voz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #d32f2f;
+      color: white;
+      padding: 30px 10px;
+    }
+    header img {
+      height: 60px;
+    }
+    main {
+      padding: 30px 20px;
+    }
+    #userInput {
+      width: 80%;
+      max-width: 400px;
+      padding: 12px;
+      font-size: 16px;
+      margin: 20px auto;
+      display: block;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      background-color: #d32f2f;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #response {
+      margin-top: 30px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      font-size: 18px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Logo_Casa_del_Audio.png" alt="Casa del Audio">
+  <h1>Asistente por Voz</h1>
+</header>
+
+<main>
+  <p>Presioná el botón y hablá. Funciona en iPhone, Android y escritorio.</p>
+  <button id="recordButton">🎙 Grabar voz</button>
+  <input type="text" id="userInput" placeholder="Consulta transcripta..." />
+  <button onclick="sendText()">Enviar consulta</button>
+  <div id="response"></div>
+</main>
+
+<script>
+let mediaRecorder, audioChunks = [];
+
+document.getElementById("recordButton").onclick = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  mediaRecorder = new MediaRecorder(stream);
+  audioChunks = [];
+
+  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+  mediaRecorder.onstop = async () => {
+    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+    const formData = new FormData();
+    formData.append('audio', blob, 'audio.webm');
+
+    const res = await fetch('/transcribe', { method: 'POST', body: formData });
+    const data = await res.json();
+    document.getElementById("userInput").value = data.transcript;
+  };
+
+  mediaRecorder.start();
+  document.getElementById("recordButton").innerText = "🎤 Grabando...";
+
+  setTimeout(() => {
+    mediaRecorder.stop();
+    document.getElementById("recordButton").innerText = "🎙 Grabar voz";
+  }, 4000);
+};
+
+function sendText() {
+  const msg = document.getElementById("userInput").value;
+  fetch("/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: msg })
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("response").innerText = "🤖 " + data.reply;
+    const utterance = new SpeechSynthesisUtterance(data.reply);
+    utterance.lang = "es-AR";
+    speechSynthesis.speak(utterance);
+  });
+}
+</script>
+
+</body>
+</html>
